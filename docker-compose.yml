@@ -1,0 +1,56 @@
+
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: wfeditor
+      POSTGRES_PASSWORD: editorpwd
+      POSTGRES_DB: wf-editor-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  editor:
+    image: luciolelii/workflow-editor:1.0.0
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/wf-editor-db
+      DB_USER: wfeditor
+      DB_PASSWORD: editorpwd
+      CORS_ALLOWED_ORIGINS: http://localhost:8080,http://editor-gui:80
+      KEYCLOAK_URL: http://keycloak:8080
+    volumes:
+      - ./editor-app:/app
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  editor-gui:
+    image: luciolelii/workflow-editor-gui:1.0.0-staging
+    ports:
+      - "9000:80"
+    depends_on:
+      - editor
+
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: wfeditor-net
